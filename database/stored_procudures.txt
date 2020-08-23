@@ -1,0 +1,662 @@
+
+DELIMITER $$
+
+CREATE PROCEDURE attendance(
+						user_id INTEGER,
+						bio_id INTEGER,
+						month_year DATE
+                     )
+
+BEGIN
+
+
+SELECT 
+date_field,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 1) as first_time_in,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 1,1) as first_time_out,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 2,1) as second_time_in,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 3,1) as second_time_out,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 4,1) as third_time_in,
+
+(SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 5,1) as third_time_out,
+
+(SELECT TIMEDIFF((SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord DESC  LIMIT 1), (SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 1))) as time_diff,
+
+
+(SELECT  SUBTIME( (SELECT TIMEDIFF((SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord DESC  LIMIT 1), (SELECT biologs.TimeOnlyRecord as time FROM users INNER JOIN biologs ON users.biometric_id = biologs.IndRegID WHERE users.id = user_id AND biologs.DateOnlyRecord =  date_field AND biologs.MachineNumber = bio_id ORDER BY biologs.TimeOnlyRecord ASC  LIMIT 1))) , '09:00:00') ) as overtime_diff
+
+
+
+FROM
+(
+    SELECT
+        MAKEDATE(YEAR(month_year),1) +
+        INTERVAL (MONTH(month_year)-1) MONTH +
+        INTERVAL daynum DAY date_field
+    FROM
+    (
+        SELECT t*10+u daynum
+        FROM
+            (SELECT 0 t UNION SELECT 1 UNION SELECT 2 UNION SELECT 3) A,
+            (SELECT 0 u UNION SELECT 1 UNION SELECT 2 UNION SELECT 3
+            UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7
+            UNION SELECT 8 UNION SELECT 9) B
+        ORDER BY daynum
+    ) AA
+) AAA
+WHERE MONTH(date_field) = MONTH(month_year);
+
+END $$
+
+
+DELIMITER ;
+
+---------------------------------------------------------------------------------------------
+
+
+DELIMITER $$
+
+CREATE PROCEDURE get_trial_balance(
+                         period_filter VARCHAR(255)
+                     )
+
+BEGIN
+
+
+SELECT 
+id,
+account,
+period,
+(
+ IF(tool = 1,FORMAT(amount,2),'0.00') 
+
+) as debit,
+
+(
+ IF(tool = 2,FORMAT(amount,2),'0.00') 
+
+) as credit,
+type,
+status,
+tool
+
+FROM trial_balance WHERE (period = period_filter OR  status = 1) AND deleted_at IS NULL;
+
+
+
+END $$
+
+
+DELIMITER ; 
+------------------------------------------------------------------------------------------
+
+DELIMITER $$
+
+CREATE PROCEDURE get_balance_sheet(
+                         period_filter VARCHAR(255)
+                     )
+
+BEGIN
+
+
+SELECT
+
+'' as id,
+'ASSETS' as title,
+'' as category,
+'' as account,
+'' as amount,
+'' as total
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'CURRENT ASSETS' as category,
+'' as account,
+'' as amount,
+'' as total
+
+UNION
+
+SELECT
+
+id as id,
+'' as title,
+'' as category,
+account,
+FORMAT(amount,2) as amount,
+'' as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND category = 1 AND type = 1 AND deleted_at IS NULL
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'FIXED ASSETS' as category,
+'' as account,
+'' as amount,
+'' as total
+
+
+
+
+UNION
+
+SELECT
+
+id as id,
+'' as title,
+'' as category,
+account,
+FORMAT(amount,2) as amount,
+'' as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND category = 2 AND type = 1 AND deleted_at IS NULL
+
+
+
+
+
+UNION
+
+SELECT
+
+'' as id,
+'TOTAL ASSETS' as title,
+'' as category,
+'' as account,
+'' as amount,
+FORMAT(SUM(amount),2) as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND category IN (1,2) AND type = 1 AND deleted_at IS NULL
+
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'' as category,
+'' as account,
+'' as amount,
+'-' as total
+
+
+UNION
+
+SELECT
+
+'' as id,
+"LIABILITIES & OWNER'S EQUITY" as title,
+'' as category,
+'' as account,
+'' as amount,
+'' as total
+
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'CURRENT LIABILITIES' as category,
+'' as account,
+'' as amount,
+'' as total
+
+UNION
+
+SELECT
+
+id as id,
+'' as title,
+'' as category,
+account,
+FORMAT(amount,2) as amount,
+'' as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND type = 2 AND deleted_at IS NULL
+
+
+
+UNION
+
+SELECT
+
+'' as id,
+'TOTAL LIABILITIES' as title,
+'' as category,
+'' as account,
+'' as amount,
+FORMAT(SUM(amount),2) as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND type = 2 AND deleted_at IS NULL
+
+
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'' as category,
+'' as account,
+'' as amount,
+'-' as total
+
+
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+"OWNER'S EQUITY" as category,
+'' as account,
+'' as amount,
+'' as total
+
+
+
+UNION
+
+SELECT
+
+id as id,
+'' as title,
+'' as category,
+account,
+FORMAT(amount,2) as amount,
+'' as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND type = 3 AND deleted_at IS NULL
+
+
+UNION
+
+SELECT
+
+'' as id,
+'TOTAL EQUITY' as title,
+'' as category,
+'' as account,
+'' as amount,
+FORMAT(SUM(amount),2) as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND type = 3 AND deleted_at IS NULL
+
+
+UNION
+
+SELECT
+
+'' as id,
+'' as title,
+'' as category,
+'' as account,
+'' as amount,
+'--' as total
+
+
+
+UNION
+
+SELECT
+
+'' as id,
+"TOTAL LIABILITIES AND OWNER'S EQUITY" as title,
+'' as category,
+'' as account,
+'' as amount,
+FORMAT(SUM(amount),2) as total
+
+FROM balance_sheet WHERE (period = period_filter OR  status = 1) AND type IN (2,3) AND deleted_at IS NULL;
+
+
+END $$
+
+DELIMITER ;
+
+------------------------------------------------------------------------------------
+
+
+ DELIMITER $$
+
+             CREATE PROCEDURE get_income_statement(
+             period_filter VARCHAR(255)
+             )
+
+             BEGIN
+
+ SELECT
+
+ '' as id,
+ 'REVENUE:' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '' as col2
+
+ UNION
+
+ SELECT 
+ id,
+ '' as title,
+ account,
+ period,
+
+ (
+  IF(type = 4,FORMAT(amount,2),'') 
+ ) as col1,
+
+ '' as col2
+
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 4 AND deleted_at IS NULL
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ 'TOTAL REVENUE:' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ (SELECT FORMAT(SUM(amount),2)
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 4 AND deleted_at IS NULL ) as col2
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ '' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '' as col2
+
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ 'EXPENSES:' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '' as col2
+
+ UNION
+
+ SELECT 
+ id,
+ '' as title,
+ account,
+ period,
+
+ (
+  IF(type = 5,FORMAT(amount,2),'') 
+
+ ) col1,
+
+ '' as col2
+
+
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 5 AND deleted_at IS NULL
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ '' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '' as col2
+
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ 'TOTAL EXPENSES:' as title,
+ '' as account,
+ '' as period,
+
+ '' as col1,
+ (SELECT FORMAT(SUM(amount),2)
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 5 AND deleted_at IS NULL ) as col2
+
+ UNION
+ SELECT
+
+ '' as id,
+ '' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '' as col2
+
+ UNION
+
+
+ SELECT
+
+ '' as id,
+ '' as title,
+ '' as account,
+ '' as period,
+ '' as col1,
+ '-' as col2
+
+ UNION
+
+ SELECT
+
+ '' as id,
+ 'PROFIT:' as title,
+ '' as account,
+ '' as period,
+ '-' as col1,
+ (FORMAT((SELECT SUM(amount)
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 4 AND deleted_at IS NULL ) - (SELECT SUM(amount)
+ FROM income_statement WHERE (period = period_filter OR  status = 1) AND type = 5 AND deleted_at IS NULL ),2)) as col2;
+
+
+
+
+
+END $$
+
+
+DELIMITER ; 
+
+
+-----------------------------------------------
+
+
+
+
+
+
+
+DELIMITER $$
+
+CREATE PROCEDURE attendance(
+                        
+                     )
+
+BEGIN
+
+
+
+SET @row_number1 = 0; 
+
+
+SELECT *
+
+    FROM (
+
+        SELECT 
+    *,
+        (@row_number1:=@row_number1 + 1) AS num1
+
+        FROM (SELECT * FROM (
+            select
+            
+            id,
+            IndRegID,
+            DATE_FORMAT(DateOnlyRecord,'%m/%Y') as month_year,
+            (case when DwInOutMode = 0 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %h:%i %p') else Null end) as timein
+            from biologs 
+             
+        ) as bioin WHERE bioin.timein IS NOT NULL
+    ) as table1 
+    
+) as tbl1 
+
+LEFT JOIN
+
+SELECT *
+
+    FROM (
+
+        SELECT 
+    *,
+        (@row_number2:=@row_number1 + 2) AS num2
+
+        FROM (SELECT * FROM (
+            select
+            
+            id,
+            IndRegID,
+            DATE_FORMAT(DateOnlyRecord,'%m/%Y') as month_year,
+            (case when DwInOutMode = 0 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %h:%i %p') else Null end) as timein
+            from biologs 
+             
+        ) as bioin WHERE bioin.timein IS NOT NULL
+    ) as table1 
+    
+) as tbl2
+
+
+END $$
+
+
+DELIMITER ;
+
+------------------------------------------------------------------------------------
+
+
+
+CALL biotimediff(3,'06/2020');
+
+
+
+DELIMITER $$
+
+CREATE PROCEDURE biotimediff(
+                        user_id INTEGER,
+                        month_year VARCHAR(191)
+                     )
+
+                        
+                BEGIN
+
+                SET @row_number1 = 0; 
+                SET @row_number2 = 0; 
+
+                SELECT (IF(DATE_FORMAT(timein,'%d') = DATE_FORMAT(timeout,'%d') ,DATE_FORMAT(timein,'%d') ,CONCAT_WS('-',DATE_FORMAT(timein,'%d'),DATE_FORMAT(timeout,'%d')))) as day, timein,timeout,
+
+                CONCAT(
+                FLOOR(HOUR(TIMEDIFF(timeout, timein)) / 24), ' day(s) ',
+                MOD(HOUR(TIMEDIFF(timeout, timein)), 24), ' hour(s) ',
+                MINUTE(TIMEDIFF(timeout, timein)), ' minute(s)')  as detailed_duration,
+
+                CONCAT((HOUR(TIMEDIFF(timeout, timein))),'.',(MINUTE(TIMEDIFF(timeout, timein)))) as duration,
+
+                (DATEDIFF(timeout, timein)) as days_duration,
+
+                (TIMEDIFF(timeout, timein)) as time_duration,
+
+                (TIMEDIFF(timeout, timein)) - INTERVAL 8 HOUR) as overtime
+
+                FROM
+
+                (SELECT tbl1.timein, tbl2.timeout FROM
+
+                (SELECT (@row_number1:=@row_number1 + 1) AS num,timein  FROM(
+                SELECT
+                (case when DwInOutMode = 0 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %H:%i:%s') else Null end) as timein
+                from biologs where IndRegID = user_id AND DATE_FORMAT(DateOnlyRecord,'%m/%Y') = month_year) as tbletimein WHERE timein IS NOT NULL) as tbl1
+
+                JOIN 
+
+                (SELECT (@row_number2:=@row_number2 + 1) AS num,timeout  FROM(
+                SELECT
+                (case when DwInOutMode = 1 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %H:%i:%s') else Null end) as timeout
+                from biologs where IndRegID = user_id AND DATE_FORMAT(DateOnlyRecord,'%m/%Y') = month_year) as tbletimein WHERE timeout IS NOT NULL) as tbl2
+
+                ON tbl1.num = tbl2.num) as tbl_payroll;
+
+
+                END $$
+
+            DELIMITER ;
+
+
+
+
+
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+CREATE VIEW bio_timeout AS
+
+SELECT * FROM (
+    select
+    id,
+    IndRegID,
+    DATE_FORMAT(DateOnlyRecord,'%m/%Y') as month_year,
+    (case when DwInOutMode = 1 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %h:%i %p') else Null end) as timein
+    from biologs 
+     
+) as bioin WHERE bioin.timein IS NOT NULL
+
+
+
+
+CREATE VIEW bio_timeout AS
+
+SELECT * FROM (
+    select
+    id,
+    IndRegID,
+    DATE_FORMAT(DateOnlyRecord,'%m/%Y') as month_year,
+    (case when DwInOutMode = 1 then DATE_FORMAT(DateTimeRecord,'%Y-%m-%d %h:%i %p') else Null end) as timein
+    from biologs 
+     
+) as bioin WHERE bioin.timein IS NOT NULL
+
+
+

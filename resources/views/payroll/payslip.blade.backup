@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Payslip</title>
+</head>
+
+<body>
+    <div class="wrapper" style="width:100%;margin :auto;font-size: 20px;font-weight: 300;">
+        Stoutcon Emergency Response Services <br>
+        No. 54 Aurelio St. Philand Drive, Pasong Tamo, QC	
+        <hr width="100%" style="border: 2px solid black;">
+        <div class="emp_data" style="font-size: 18px;">
+            <table class="emp" style="width:100%;">
+                <tr> 
+                    <td class="block" style="width: 20px"  >Employee:</td>
+                    <td style=" border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ $user->name }}</td>
+                   
+                  </tr>
+                  <tr>
+                   
+                    <td class="block">Position:</td>
+                    <td style="border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ $user->position }} </td>
+                    
+                  </tr>
+                    <tr>
+                    <td class="block">Status:</td>
+                    <td style=" border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{  $user->work_status }} </td>
+                    
+                  </tr>
+                 
+                </table>
+                <br>
+                <table class="emp2" style="width:100%;">
+                    <tr>
+                        <td class="block" style="width: 10px">Project:  </td>
+                        <td style=" border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ $user->project }} </td>
+                   
+                      </tr>
+
+                       <tr>
+                        
+                        <td class="block">Location:</td>
+                        <td style=" border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ $user->location }} </td>
+                        
+                      </tr>
+
+                        <tr>
+                        
+                   
+                        <td class="block">Period:</td>
+                        <td style=" border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ $month_year }} </td>
+                      </tr>
+
+
+
+                    </table>
+                    <hr width="100%" style="border: .5px solid black;">
+                    <table class="emp2" style="width:70%;">
+                        <tr>
+                            <td class="block">Rate/Hr.:  </td>
+                            <td style="width: 150px; border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ number_format($user->rate_per_hour,2) }} </td>
+                            <td class="block" style="width: 150px">Night Diff/hr.:</td>
+                            <td style="width: 150px; border-bottom: 1px solid #000; text-align: left; font-weight: bold;"> {{ number_format($user->night_differencial,2) }} </td>
+                        </tr>
+                    </table>
+                    <hr width="100%" style="border: .5px solid black;">
+                    <br>
+                    <table class="emp2" >
+                        <tr >
+                            <td class="block">No. of Days </td>
+                            <td class="block">Rate/8 hrs.</td>
+                            <td class="block">Night Diff/8Hrs </td>
+                            <td class="block">Basic Salary</td>
+                            <td class="block" >&nbsp;Deduction</td>
+                        </tr>
+
+                      	  <tr>
+                        	<td>
+                        		<br > 
+                        	</td>
+                        </tr>
+
+                        <tr>
+                            <td class="block">{{ $payslip->days }} </td>
+                            <td class="block">{{ $payslip->basic_salary ? number_format(($payslip->basic_salary) / $payslip->days,2) : '0.00' }}</td>
+                            <td class="block"></td>
+                            <td class="block">{{ number_format($payslip->basic_salary,2) }}</td>
+                            <td class="block"> &nbsp; SSS:</td>
+                            <td class="block">{{ number_format($user->sss_contribution,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block">{{ $payslip->nights }}< </td>
+                            <td class="block"></td>
+                            <td class="block">{{ $payslip->night_differencial ? number_format(($payslip->night_differencial) / $payslip->nights,2) : '0.00'}} </td>
+                            <td class="block" style="border-bottom: 1px solid black">{{ number_format($payslip->night_differencial,2) }}</td>
+                            <td class="block">&nbsp;Philhealth:</td>
+                            <td class="block">{{ number_format($payslip->philhealth,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block"  >Total Basic Salary </td>
+                            <td class="block"></td>
+                            <td class="block"></td>
+                            <td class="block">{{ number_format($payslip->total_basic_salary,2) }}</td>
+                            <td class="block">&nbsp;HDMF:</td>
+                            <td class="block">{{ number_format($payslip->pag_ibig,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block"  >Plus: Overtime </td>
+                            <td class="block" ></td>
+                            <td class="block"></td>
+                            <td class="block">{{ number_format($payslip->overtime,2) }}</td>
+                            <td class="block">&nbsp;Tax Withheld:</td>
+                            <td class="block"> {{ number_format($payslip->tax,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block"  >Benefits</td>
+                            <td class="block" ></td>
+                            <td class="block"></td>
+                            <td class="block">{{ number_format($payslip->benefits,2) }}</td>
+                            <td class="block">&nbsp;Tardiness/Late:</td>
+                            <td class="block">{{ number_format($payslip->tardiness,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block"  >Other Benefits </td>
+                            <td class="block" ></td>
+                            <td class="block"></td>
+                            <td class="block" style="border-bottom: 1px solid black">{{ number_format($payslip->other_benefits,2) }}</td>
+                            <td class="block">&nbsp;Total Deductions:</td>
+                            <td class="block" style="border-bottom: 1px solid black"> {{ number_format($payslip->total_deduction,2) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="block"  >Gross Pay </td>
+                            <td class="block"></td>
+                            <td class="block"></td>
+                            <td class="block" style="border-bottom: 1px solid black">{{ number_format($payslip->gross_pay,2) }}</td>
+                            <td class="block">&nbsp;NET PAY:</td>
+                            <td class="block" style="border-bottom: 1px solid black">{{ number_format($payslip->net_pay,2) }}</td>
+                        </tr>
+                    </table>
+                      <div class="deduction_divider" style="border-left: 5px solid black;height: 230px;position: absolute;top: 340px;right: 232px">
+    	
+    				</div>
+                   
+        </div>			
+    </div>
+  
+
+
+</body>
+
+</html>
